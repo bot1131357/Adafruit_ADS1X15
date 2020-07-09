@@ -51,11 +51,11 @@
     @brief  Abstract away platform differences in Arduino wire library
 */
 /**************************************************************************/
-static uint8_t i2cread(void) {
+uint8_t Adafruit_ADS1015::i2cread(void) {
   #if ARDUINO >= 100
-  return Wire.read();
+  return m_Wire->read();
   #else
-  return Wire.receive();
+  return m_Wire->receive();
   #endif
 }
 
@@ -64,11 +64,11 @@ static uint8_t i2cread(void) {
     @brief  Abstract away platform differences in Arduino wire library
 */
 /**************************************************************************/
-static void i2cwrite(uint8_t x) {
+void Adafruit_ADS1015::i2cwrite(uint8_t x) {
   #if ARDUINO >= 100
-  Wire.write((uint8_t)x);
+  m_Wire->write((uint8_t)x);
   #else
-  Wire.send(x);
+  m_Wire->send(x);
   #endif
 }
 
@@ -77,12 +77,12 @@ static void i2cwrite(uint8_t x) {
     @brief  Writes 16-bits to the specified destination register
 */
 /**************************************************************************/
-static void writeRegister(uint8_t i2cAddress, uint8_t reg, uint16_t value) {
-  Wire.beginTransmission(i2cAddress);
+void Adafruit_ADS1015::writeRegister(uint8_t i2cAddress, uint8_t reg, uint16_t value_map) {
+  m_Wire->beginTransmission(i2cAddress);
   i2cwrite((uint8_t)reg);
-  i2cwrite((uint8_t)(value>>8));
-  i2cwrite((uint8_t)(value & 0xFF));
-  Wire.endTransmission();
+  i2cwrite((uint8_t)(value_map>>8));
+  i2cwrite((uint8_t)(value_map & 0xFF));
+  m_Wire->endTransmission();
 }
 
 /**************************************************************************/
@@ -90,11 +90,11 @@ static void writeRegister(uint8_t i2cAddress, uint8_t reg, uint16_t value) {
     @brief  Reads 16-bits to the specified destination register
 */
 /**************************************************************************/
-static uint16_t readRegister(uint8_t i2cAddress, uint8_t reg) {
-  Wire.beginTransmission(i2cAddress);
+uint16_t Adafruit_ADS1015::readRegister(uint8_t i2cAddress, uint8_t reg) {
+  m_Wire->beginTransmission(i2cAddress);
   i2cwrite(reg);
-  Wire.endTransmission();
-  Wire.requestFrom(i2cAddress, (uint8_t)2);
+  m_Wire->endTransmission();
+  m_Wire->requestFrom(i2cAddress, (uint8_t)2);
   return ((i2cread() << 8) | i2cread());  
 }
 
@@ -116,6 +116,7 @@ Adafruit_ADS1015::Adafruit_ADS1015(uint8_t i2cAddress)
 /**************************************************************************/
 Adafruit_ADS1115::Adafruit_ADS1115(uint8_t i2cAddress)
 {
+   m_Wire = &Wire;
    m_i2cAddress = i2cAddress;
    m_bitShift = ADS1115_CONV_REG_BIT_SHIFT_0;
 }
@@ -126,7 +127,12 @@ Adafruit_ADS1115::Adafruit_ADS1115(uint8_t i2cAddress)
 */
 /**************************************************************************/
 void Adafruit_ADS1015::begin() {
-  Wire.begin();
+  m_Wire->begin();
+}
+
+void Adafruit_ADS1015::begin(TwoWire* wire)
+{
+  m_Wire = wire;
 }
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -138,7 +144,7 @@ void Adafruit_ADS1015::begin() {
 */
 /**************************************************************************/
 void Adafruit_ADS1015::begin(uint8_t sda, uint8_t scl) {
-  Wire.begin(sda, scl);
+  m_Wire->begin(sda, scl);
 }
 #endif
 
@@ -484,10 +490,10 @@ void Adafruit_ADS1015::startWindowComparator_SingleEnded(uint8_t channel, int16_
 /**************************************************************************/
 void Adafruit_ADS1015::startContinuous_SingleEnded(uint8_t channel)
 {
-  // Initial single ended non-contunuous read primes the conversion buffer with a valid reading
+  // Initial single ended non-continuous read primes the conversion buffer with a valid reading
   // so that the initial interrupts produced a correct result instead of a left over 
   // conversion result from previous operations.
-  int16_t primingRead = readADC_SingleEnded(channel); 
+  readADC_SingleEnded(channel); 
   
   // Start with default values
   uint16_t config = ADS1X15_REG_CONFIG_CQUE_1CONV   | // Comparator enabled and asserts on 1 match
@@ -504,7 +510,7 @@ void Adafruit_ADS1015::startContinuous_SingleEnded(uint8_t channel)
   config |= getSingleEndedConfigBitsForMUX(channel);
 
   // Continuous mode is set by setting the most signigicant bit for the HIGH threshold to 1
-  // and for the LOW threshold to 0.  This is accomlished by setting the HIGH threshold to the 
+  // and for the LOW threshold to 0.  This is accomplished by setting the HIGH threshold to the 
   // low default (a negative number) and the LOW threshold to the HIGH default (a positive number)
   writeRegister(m_i2cAddress, ADS1X15_REG_POINTER_HITHRESH, ADS1X15_LOW_THRESHOLD_DEFAULT);
   writeRegister(m_i2cAddress, ADS1X15_REG_POINTER_LOWTHRESH, ADS1X15_HIGH_THRESHOLD_DEFAULT);
@@ -526,7 +532,7 @@ void Adafruit_ADS1015::startContinuous_Differential(adsDiffMux_t regConfigDiffMU
   // Initial Differential non-contunuous read primes the conversion buffer with a valid reading
   // so that the initial interrupts produced a correct result instead of a left over 
   // conversion result from previous operations.
-  int16_t primingRead = readADC_Differential(regConfigDiffMUX); 
+  readADC_Differential(regConfigDiffMUX); 
   
   // Start with default values
   uint16_t config = ADS1X15_REG_CONFIG_CQUE_1CONV   | // Comparator enabled and asserts on 1 match
@@ -604,7 +610,7 @@ void Adafruit_ADS1015::startContinuous_Differential_2_3() {
 /**************************************************************************/
 /*!
     @brief  Poll the device each millisecond until the conversion is done.  
-	        Using delay is important for an ESP8266 becasue it yeilds to the
+	        Using delay is important for an ESP8266 becasue it yields to the
 			allow network operations to run.
 */
 /**************************************************************************/

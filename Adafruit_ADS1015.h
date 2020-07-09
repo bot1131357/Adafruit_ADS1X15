@@ -195,13 +195,18 @@ protected:
    uint8_t   m_bitShift;
    adsGain_t m_gain                = GAIN_DEFAULT;  /* +/- 6.144V range (limited to VDD +0.3V max!) */
    adsSPS_t  m_SPS                 = DR_DEFAULT_SPS;
-
+   TwoWire*  m_Wire;
  public:
   Adafruit_ADS1015(uint8_t i2cAddress = ADS1X15_ADDRESS);
   void begin(void);
+  void begin(TwoWire*);
 #if defined(ARDUINO_ARCH_ESP8266)
   void begin(uint8_t sda, uint8_t scl);
 #endif  
+  uint8_t   i2cread(void);
+  void      i2cwrite(uint8_t x);
+  void      writeRegister(uint8_t i2cAddress, uint8_t reg, uint16_t value_map);
+  uint16_t  readRegister(uint8_t i2cAddress, uint8_t reg);
   int16_t   readADC_SingleEnded(uint8_t channel);
   int16_t   readADC_Differential(adsDiffMux_t);
   int16_t   readADC_Differential_0_1(void);

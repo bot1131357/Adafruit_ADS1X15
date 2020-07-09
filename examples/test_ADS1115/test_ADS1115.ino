@@ -80,7 +80,7 @@ void setup(void)
   /* Use this to set data rate for the 16-bit version (optional)*/
   ads.setSPS(ADS1115_DR_8SPS);                      // for ADS1115 fastest samples per second is 860 (default is 128)
 
-  ads.readADC_Differential_0_1();                   // in case chip was previously in contuous mode, take out of continuous
+  ads.readADC_Differential_0_1();                   // in case chip was previously in continuous mode, take out of continuous
   ads.waitForConversion();                          // delay to ensure any last remaining conversion completes
                                                     // needed becasue if formerly was in continuous, 2 conversions need to complete
   
